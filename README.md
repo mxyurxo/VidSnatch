@@ -11,6 +11,49 @@ A powerful Manifest V3 browser extension for Chrome and Brave that detects and d
 - **Format Selection:** Choose between MP4 and WebM (or TS for streams) before downloading.
 - **Sleek Dark UI:** Modern, responsive popup interface with progress bars and metadata badges.
 
+## How It Works (Architecture Pipeline)
+
+```mermaid
+graph TD
+    subgraph Target Webpage
+        DOM[DOM / Shadow DOM] -->|Contains| Videos[Video Elements / Web Components]
+        Net[Network Requests] -->|Fetches| Media[Video/TS/M3U8 URLs]
+    end
+
+    subgraph Content Script 
+        Scanner[DOM Scanner]
+        Intercept[Fetch/XHR Interceptor]
+        
+        Scanner -->|Scans Deep DOM| Videos
+        Intercept -->|Intercepts| Net
+        
+        Scanner -->|Extracts URLs| Msg[Send Messages to Background]
+        Intercept -->|Extracts URLs| Msg
+    end
+
+    subgraph Background Service Worker
+        M3U8[M3U8 Parser]
+        Store[Video Storage State]
+        Merger[HLS/TS Merger]
+        
+        Msg -->|Adds to| Store
+        Msg -->|If .m3u8| M3U8
+        M3U8 -->|Parses Segments| Store
+    end
+
+    subgraph Popup UI
+        UI[User Interface]
+        DL[Download Trigger]
+        
+        UI <-->|Fetches state| Store
+        UI -->|Clicks Download| DL
+        
+        DL -->|Direct File| NativeDL[Browser Downloads API]
+        DL -->|HLS Stream| Merger
+        Merger -->|Downloads & Concatenates Blob| NativeDL
+    end
+```
+
 ## Installation
 
 ### Load Unpacked (Developer Mode)
